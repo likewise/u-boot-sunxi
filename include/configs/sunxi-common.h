@@ -27,9 +27,11 @@
 #ifndef _SUNXI_CONFIG_H
 #define _SUNXI_CONFIG_H
 
+/*
 #define DEBUG
 #define CONFIG_MTD_DEBUG
 #define CONFIG_MTD_DEBUG_VERBOSE 99
+*/
 
 /*
  * High Level Configuration Options
@@ -74,13 +76,44 @@
 #define CONFIG_NR_DRAM_BANKS		1
 #define PHYS_SDRAM_1				CONFIG_SYS_SDRAM_BASE	/* SDRAM Bank #1 */
 
-/* Nand config */
-#define CONFIG_NAND
+
+#ifdef CONFIG_NAND
+
 #define CONFIG_NAND_SUNXI
 #define CONFIG_CMD_NAND                         /* NAND support */
 #define CONFIG_SYS_MAX_NAND_DEVICE      1
 #define CONFIG_SYS_NAND_BASE            0x00
 #define CONFIG_SYS_NAND_ONFI_DETECTION
+#define CONFIG_SUNXI_DMA
+#define CONFIG_ENV_IS_IN_NAND
+#define CONFIG_SPL_NAND_SUPPORT
+#define CONFIG_SPL_NAND_MTD
+#define CONFIG_SPL_DMA_SUPPORT
+#define CONFIG_SYS_NAND_U_BOOT_OFFS     0x100000
+
+#ifdef CONFIG_EM6000
+#define CONFIG_SYS_NAND_PAGE_SIZE 0x2000
+#define CONFIG_SYS_NAND_BLOCK_SIZE 0x100000
+#define CONFIG_SYS_NAND_OOBSIZE 640
+#endif
+
+#elif CONFIG_MMC
+
+#define CONFIG_GENERIC_MMC
+#define CONFIG_CMD_MMC
+#define CONFIG_MMC_SUNXI
+#define CONFIG_MMC_SUNXI_SLOT		0		    /* which mmc slot to use, could be 0,1,2,3 */
+#define CONFIG_MMC_SUNXI_USE_DMA
+#define CONFIG_ENV_IS_IN_MMC
+#define CONFIG_SYS_MMC_ENV_DEV		CONFIG_MMC_SUNXI_SLOT		/* env in which mmc */
+#define CONFIG_SPL_MMC_SUPPORT
+#define CONFIG_SPL_LIBDISK_SUPPORT
+
+#else
+
+#define CONFIG_ENV_IS_NOWHERE
+
+#endif
 
 #define CONFIG_CMD_MEMORY
 #define CONFIG_CMD_SETEXPR
@@ -90,19 +123,6 @@
 #define CONFIG_INITRD_TAG
 #define CONFIG_CMDLINE_EDITING
 
-/* mmc config */
-#if 0
-#define CONFIG_MMC
-#define CONFIG_GENERIC_MMC
-#define CONFIG_CMD_MMC
-#define CONFIG_MMC_SUNXI
-#define CONFIG_MMC_SUNXI_SLOT		0		/* which mmc slot to use, could be 0,1,2,3 */
-#define CONFIG_MMC_SUNXI_USE_DMA
-#define CONFIG_ENV_IS_IN_MMC
-#define CONFIG_SYS_MMC_ENV_DEV		CONFIG_MMC_SUNXI_SLOT		/* env in which mmc */
-#endif
-
-#define CONFIG_ENV_IS_NOWHERE
 
 /*
  * Size of malloc() pool
@@ -158,7 +178,7 @@
 #define CONFIG_ENV_SIZE			(128 << 10)	/* 128KB */
 
 #if 0
-#define CONFIG_BOOTDELAY	3
+#define CONFIG_BOOTDELAY	1
 #define CONFIG_BOOTCOMMAND \
 	"if run loadbootenv; then " \
 		"echo Loaded environment from ${bootenv};" \
@@ -175,7 +195,46 @@
 	"run setargs boot_mmc;"
 #endif
 
-#define CONFIG_EXTRA_ENV_SETTINGS \
+#define CONFIG_BOOTDELAY	3
+
+#define CONFIG_EXTRA_ENV_SETTINGS										\
+	"kernel_loadaddr=0x48000000\0"										\
+	"script_loadaddr=0x43000000\0"										\
+	"console=ttyS0,115200n8\0"											\
+	"nandargs=setenv bootargs console=${console} init=/linuxrc "		\
+	    "mtdparts=mtd-nand-sunxi.0:1M,2M,2M,2M,2M,8M,- ubi.mtd=6 "		\
+	    "root=ubi0:rootfs rootwait rootfstype=ubifs "	   				\
+	    "quiet\0"														\
+	"nandboot=run nandargs; "											\
+	    "nand read ${script_loadaddr} 0x700000 0x10000; "  				\
+	    "nand read ${kernel_loadaddr} 0x900000 0x400000; "		   		\
+	    "bootm ${kernel_loadaddr}\0"									\
+	"bootcmd=run nandboot\0"											\
+	"bootdelay=1\0"
+
+/*
+	"baudrate=115200\0"													\
+	"boot_mmc=fatload mmc 0 0x43000000 script.bin && fatload mmc 0 0x48000000 ${kernel} && watchdog 0 && bootm 0x48000000\0" \
+	"bootcmd=if run loadbootenv; then echo Loaded environment from ${bootenv};env import -t ${scriptaddr} ${filesize};fi;if test -n ${uenvcmd}; then echo Running uenvcmd ...;run uenvcmd;fi;if run loadbootscr; then echo Jumping to ${bootscr};source ${scriptaddr};fi;run setargs boot_mmc;\0" \
+	"bootdelay=3\0"														\
+	"bootenv=uEnv.txt\0"												\
+	"bootscr=boot.scr\0"												\
+	"console=ttyS0,115200\0"											\
+	"ethact=wemac\0"													\
+	"ethaddr=44:37:e6:28:3b:80\0"										\
+	"ipaddr=192.168.0.114\0"											\
+	"kernel=uImage\0"													\
+	"loadbootenv=fatload mmc 0 $scriptaddr ${bootenv} || ext2load mmc 0 $scriptaddr ${bootenv} || ext2load mmc 0 $scriptaddr boot/${bootenv}\0" \
+	"loadbootscr=fatload mmc 0 $scriptaddr ${bootscr} || ext2load mmc 0 $scriptaddr ${bootscr} || ext2load mmc 0 $scriptaddr boot/${bootscr}\0" \
+	"loglevel=8\0"														\
+	"panicarg=panic=10\0"												\
+	"root=/dev/mmcblk0p2 rootwait rootfstype=ext4\0"					\
+	"scriptaddr=0x44000000\0"											\
+	"serverip=192.168.0.10\0"											\
+	"setargs=setenv bootargs console=${console} root=${root} vt.global_cursor_default=0\0"
+*/
+
+/*
 	"u-boot=loady 4a000000 && go 4a000000\0" \
 	"console=ttyS0,115200\0" \
 	"root=/dev/mmcblk0p2 rootwait\0" \
@@ -197,6 +256,7 @@
 	"boot_mmc=fatload mmc 0 0x43000000 script.bin &&" \
 		" fatload mmc 0 0x48000000 ${kernel} &&" \
 		" watchdog 0 && bootm 0x48000000\0"
+*/
 
 #define CONFIG_SYS_BOOT_GET_CMDLINE
 #define CONFIG_AUTO_COMPLETE
@@ -214,16 +274,12 @@
 #define CONFIG_SPL_BSS_START_ADDR	0x50000000
 #define CONFIG_SPL_BSS_MAX_SIZE		0x80000		/* 512 KB */
 
-#define CONFIG_SPL_TEXT_BASE		0x20		/* sram start+header */
+#define CONFIG_SPL_TEXT_BASE	0x2d0       /* boot0 head size */
 #define CONFIG_SPL_MAX_SIZE		0x8000		/* 32 KB */
 
 #define CONFIG_SPL_LIBCOMMON_SUPPORT
-#define CONFIG_SPL_LIBDISK_SUPPORT
 #define CONFIG_SPL_SERIAL_SUPPORT
 #define CONFIG_SPL_LIBGENERIC_SUPPORT
-#ifdef CONFIG_MMC
-#define CONFIG_SPL_MMC_SUPPORT
-#endif
 #define CONFIG_SPL_DISPLAY_PRINT
 
 /* end of 24KB in sram */
@@ -241,12 +297,14 @@
 #undef CONFIG_CMD_NFS
 
 /* I2C */
+#if 1
 #define CONFIG_SPL_I2C_SUPPORT
 #define CONFIG_SYS_I2C_SPEED		400000
 #define CONFIG_HARD_I2C
 #define CONFIG_SUNXI_I2C
 #define CONFIG_SYS_I2C_SLAVE		0x7f
 #define CONFIG_CMD_I2C
+#endif
 
 /* Watchdog */
 /* #define CONFIG_WATCHDOG */		/* automatic watchdog support */
@@ -258,7 +316,9 @@
 #define CONFIG_CMD_GPIO
 
 /* PMU */
+#if 1
 #define CONFIG_SPL_POWER_SUPPORT
 #define CONFIG_AXP209_POWER
+#endif
 
 #endif /* __CONFIG_H */

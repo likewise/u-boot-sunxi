@@ -33,6 +33,9 @@ endif
 ifdef CONFIG_SPL_NAND_LOAD
 COBJS-y	+= nand_spl_load.o
 endif
+ifdef CONFIG_SPL_NAND_MTD
+COBJS-y += nand_spl_mtd.o
+endif
 else
 COBJS-y += nand.o
 COBJS-y += nand_bbt.o
